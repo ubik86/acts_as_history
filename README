@@ -1,0 +1,76 @@
+= acts_as_history
+
+This plugin is nice utility for storing objects in database. 
+You can use it for ActiveRecord::Base or ActiveRecord::BaseWithoutTable models.
+
+This is beta version. Please check and let me know if something doesn't work ;)
+
+== Install
+  
+  Plugin generator will generate migrations for table 'histories'.
+  
+  Migration
+  
+  ./script/generate acts_as_history
+  rake db:migrate
+
+== Examples
+
+1. Create your own class in History namespace
+
+class History::CompanyHistory < History
+  # here you need to define serialized class
+  Company
+end
+
+
+2. Declare acts_as_history in Company model
+
+class Company < ActiveRecord::Base
+  acts_as_history :delete_from => :week  # config {:day, :week, :month, :year}
+  after_save :write_history
+  
+  # set associations
+  has_many   :company_histories, :as => :owner, :class_name => 'History::CompanyHistory', :dependent => :destroy  
+  has_many   :setting_histories, :as => :owner, :class_name => 'History::CompanySetting', :dependent => :destroy
+  
+  # this method will return setting history for period
+  def histories_for_period(period)
+    self.setting_histories.find_first_by_date(period.time.end_of_month).value
+  end
+  # other methods... 
+end
+
+
+Other methods are inherited from History class or included from vendor/plugin/acts_as_history/lib/acts_as_history.rb 
+
+
+3. Using 
+
+a) reading history :
+
+>> Company.find(1).company_histories.first.value
+  Company Load (0.3ms)   SELECT * FROM `companies` WHERE (`companies`.`id` = 1) 
+  History::CompanyHistory Load (0.4ms)   SELECT * FROM `histories` WHERE (`histories`.owner_id = 1 AND `histories`.owner_type = 'Company') AND ( (`histories`.`type` = 'History::CompanyHistory' ) ) LIMIT 1
+ => #<Company id: 1, activated: true, locked: nil, accounting_office_id: nil, address: "foo", city: nil, name: "example company name", nip: "xxx-xxx-xx-xx", postal_code: "62-800", regon: "320816455", bank_account: nil, created_at: "2010-05-07 11:43:38", updated_at: "2010-05-07 11:43:38", city_id: 832, natural_person: true, to_destroy: nil, tax_office_id: nil, country_id: 161>
+
+>> Company.first.read_history_for_object(SaleInvoice.find(3),:updated_at)
+
+>> Company.first.read_history_by_date Time.now
+
+b) write to history 
+
+>> a = History::CompanyHistory.new(:owner => Company.first, :value => Company.first, :date =>Time.now)
+>> a.save
+
+c) checking history status for date
+
+>>Company.first.has_history_from? Time.now - 1.day
+=> true
+
+
+== Contact
+
+Any bugs, questions, comments please feel free to email me : boguslaw.tarnowski@gmail.com
+
+Copyright (c) 2010,  Boguslaw Tarnowski, released under the MIT license
