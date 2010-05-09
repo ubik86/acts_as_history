@@ -68,6 +68,9 @@ c) checking history status for date
 >>Company.first.has_history_from? Time.now - 1.day
 => true
 
+== Contributors
+
+Michał Górski, http://www.goorsky.info
 
 == Contact
 
